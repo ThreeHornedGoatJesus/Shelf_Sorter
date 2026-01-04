@@ -1,7 +1,11 @@
-﻿from flask import Flask, render_template, request, jsonify
+﻿import os
+from flask import Flask, render_template, request, jsonify
 from packer import pack_multiple_items, best_layout
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+base_dir = os.path.dirname(__file__)
+template_dir = os.path.join(base_dir, 'templates')
+static_dir = os.path.join(base_dir, 'static')
+app = Flask(__name__, static_folder=static_dir, template_folder=template_dir)
 
 @app.route('/')
 def index():
