@@ -36,3 +36,23 @@ build_exe.bat
 Notes
 
 - Building the executable requires Python and PyInstaller. The CI build uses `windows-latest` runner and Python 3.11.
+## Multi-item input and exports
+
+You can provide a CSV or JSON file with item types and counts (columns: `w,h,count`), and the tool will attempt to pack items greedily largest-first. Examples are in the `examples/` folder.
+
+Examples:
+
+```powershell
+# CSV input
+python packer.py --box 200 100 --items-file examples\items.csv --visualize --out examples\layout_multi.png --output-json examples\placements.json --output-csv examples\placements.csv
+
+# JSON input
+python packer.py --box 200 100 --items-file examples\items.json --visualize --out examples\layout_multi.png --output-json examples\placements.json --output-csv examples\placements.csv
+```
+
+Flags:
+- `--items-file PATH` : CSV or JSON file with items (CSV headers: w,h,count)
+- `--output-json PATH` : write placements summary to JSON file
+- `--output-csv PATH` : write placements to CSV file
+
+Note: multi-item packing currently uses a simple greedy placement; for denser/optimal packing, I can add heuristic bin-packing (guillotine, skyline) later.
