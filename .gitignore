@@ -1,0 +1,33 @@
+﻿# Windows system files
+Thumbs.db
+desktop.ini
+*.log
+*.tmp
+*.bak
+# Windows user dirs (do not commit)
+AppData/
+Downloads/
+OneDrive/
+Contacts/
+Saved Games/
+Videos/
+Music/
+Pictures/
+Desktop/
+Links/
+Favorites/
+ntuser.dat*
+NTUSER.DAT*
+# Editor and IDE
+.vscode/
+*.suo
+*.user
+# Python
+__pycache__/
+*.pyc
+env/
+.venv/
+# Git
+.gitconfig
+# Others
+.DS_Store
