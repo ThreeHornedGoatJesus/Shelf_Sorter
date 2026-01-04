@@ -56,3 +56,13 @@ Flags:
 - `--output-csv PATH` : write placements to CSV file
 
 Note: multi-item packing currently uses a simple greedy placement; for denser/optimal packing, I can add heuristic bin-packing (guillotine, skyline) later.
+
+Local GUI
+
+You can run the local GUI (Tkinter) which requires no additional web server:
+
+```powershell
+python gui.py
+```
+
+Alternatively, the CI and local build scripts now build a `packer-gui.exe` alongside `packer.exe`.

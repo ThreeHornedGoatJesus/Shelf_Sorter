@@ -23,15 +23,20 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -v tests
       - name: Build exe with PyInstaller
-        run: pyinstaller --onefile packer.py --name packer
+        run: |
+          pyinstaller --onefile packer.py --name packer
+          pyinstaller --onefile gui.py --name packer-gui
       - name: Create versioned zip
         run: |
           $zipName = "packer-$env:VERSION-windows.zip"
-          if (Test-Path dist\packer.exe) {
-            Compress-Archive -Path dist\packer.exe, README.md -DestinationPath $zipName -Force
-            Write-Host "Created $zipName"
+          $files = @()
+          if (Test-Path dist\packer.exe) { $files += 'dist\\packer.exe' }
+          if (Test-Path dist\packer-gui.exe) { $files += 'dist\\packer-gui.exe' }
+          if ($files.Count -gt 0) {
+            Compress-Archive -Path $files, README.md -DestinationPath $zipName -Force
+            Write-Host "Created $zipName containing: $files"
           } else {
-            Write-Error "dist\packer.exe not found"
+            Write-Error "No dist executables found"
             exit 1
           }
       - name: List artifacts
