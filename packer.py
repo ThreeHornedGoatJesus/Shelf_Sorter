@@ -84,37 +84,49 @@ def can_place(x: float, y: float, w: float, h: float, box_w: float, box_h: float
 def pack_multiple_items(box_w: float, box_h: float, items: List[Dict]) -> List[Dict]:
     """Pack multiple item types. Items: list of dicts {'w','h','count','id'(optional)}
     Returns list of placements with fields x,y,w,h,type_id
-    Simple greedy scan algorithm: place largest-first and scan rows/cols for fit."""
-    # expand items with ids and sort by area desc
-    expanded = []
+    Greedy multi-pass placement: place largest-first repeatedly until no more placements are possible.
+    Count==0 or None means unlimited supply for that type."""
+    # Build types list with counts; count=None means unlimited
+    types = []
     for i, it in enumerate(items):
-        count = int(it.get('count', 1))
-        for _ in range(count):
-            expanded.append({'w': float(it['w']), 'h': float(it['h']), 'type': i})
-    expanded.sort(key=lambda x: x['w'] * x['h'], reverse=True)
+        cnt = it.get('count', 1)
+        if cnt is None or (isinstance(cnt, int) and cnt == 0) or (isinstance(cnt, str) and int(cnt) == 0):
+            cnt = None
+        else:
+            cnt = int(cnt)
+        types.append({'w': float(it['w']), 'h': float(it['h']), 'count': cnt, 'type': i})
+    # sort types by area descending
+    types.sort(key=lambda x: x['w'] * x['h'], reverse=True)
 
-    placements = []  # dicts with x,y,w,h,type
+    placements = []
     step = 1.0
-    for item in expanded:
-        w = item['w']; h = item['h']
-        placed_flag = False
-        for y in [round(i * step, 6) for i in range(int((box_h // step) + 1))]:
-            if y + min(w, h) > box_h:
-                break
-            for x in [round(i * step, 6) for i in range(int((box_w // step) + 1))]:
-                # try unrotated
-                if can_place(x, y, w, h, box_w, box_h, [(p['x'], p['y'], p['w'], p['h']) for p in placements]):
-                    placements.append({'x': x, 'y': y, 'w': w, 'h': h, 'type': item['type']})
-                    placed_flag = True
+    # Keep placing until a full pass yields no placements
+    while True:
+        placed_in_pass = 0
+        for t in types:
+            if t['count'] is not None and t['count'] <= 0:
+                continue
+            w = t['w']; h = t['h']
+            for y in [round(i * step, 6) for i in range(int((box_h // step) + 1))]:
+                if y + min(w, h) > box_h:
                     break
-                # try rotated
-                if can_place(x, y, h, w, box_w, box_h, [(p['x'], p['y'], p['w'], p['h']) for p in placements]):
-                    placements.append({'x': x, 'y': y, 'w': h, 'h': w, 'type': item['type']})
-                    placed_flag = True
-                    break
-            if placed_flag:
-                break
-        # if couldn't place item, skip it
+                for x in [round(i * step, 6) for i in range(int((box_w // step) + 1))]:
+                    if t['count'] is not None and t['count'] <= 0:
+                        break
+                    if can_place(x, y, w, h, box_w, box_h, [(p['x'], p['y'], p['w'], p['h']) for p in placements]):
+                        placements.append({'x': x, 'y': y, 'w': w, 'h': h, 'type': t['type']})
+                        placed_in_pass += 1
+                        if t['count'] is not None:
+                            t['count'] -= 1
+                        continue
+                    if can_place(x, y, h, w, box_w, box_h, [(p['x'], p['y'], p['w'], p['h']) for p in placements]):
+                        placements.append({'x': x, 'y': y, 'w': h, 'h': w, 'type': t['type']})
+                        placed_in_pass += 1
+                        if t['count'] is not None:
+                            t['count'] -= 1
+                        continue
+        if placed_in_pass == 0:
+            break
     return placements
 
 
@@ -167,7 +179,13 @@ def parse_items_file(path: str) -> List[Dict]:
     if path.lower().endswith('.json'):
         with open(path, 'r', encoding='utf8') as f:
             data = json.load(f)
-            # expect list of objects {w,h,count}
+            # expect list of objects {w,h,count} - treat count==0 as unlimited
+            for it in data:
+                c = it.get('count', 1)
+                if c is None or (isinstance(c, int) and c == 0) or (isinstance(c, str) and int(c) == 0):
+                    it['count'] = None
+                else:
+                    it['count'] = int(c)
             return data
     else:
         # assume CSV with headers w,h,count
@@ -175,7 +193,10 @@ def parse_items_file(path: str) -> List[Dict]:
         with open(path, 'r', encoding='utf8') as f:
             reader = csv.DictReader(f)
             for r in reader:
-                items.append({'w': float(r['w']), 'h': float(r['h']), 'count': int(r.get('count', 1))})
+                c = int(r.get('count', 1))
+                if c == 0:
+                    c = None
+                items.append({'w': float(r['w']), 'h': float(r['h']), 'count': c})
         return items
 
 
@@ -222,7 +243,11 @@ def main():
         sys.exit(1)
 
     item_w, item_h = args.item
-    max_items = args.count
+    # treat count == 0 as unlimited (maximize number placed)
+    if args.count == 0:
+        max_items = None
+    else:
+        max_items = args.count
     best = best_layout(box_w, box_h, item_w, item_h, max_items)
     placed = len(best)
     print(f'Placed: {placed} item(s)')
